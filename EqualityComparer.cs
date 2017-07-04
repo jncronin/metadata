@@ -44,4 +44,17 @@ namespace metadata
             return x.Equals(y);
         }
     }
+
+    public class GenericEqualityComparerEnum<T> : EqualityComparer<T> where T : struct, IConvertible
+    {
+        public override bool Equals(T x, T y)
+        {
+            return x.Equals(y);
+        }
+
+        public override int GetHashCode(T obj)
+        {
+            return obj.GetHashCode();
+        }
+    }
 }
