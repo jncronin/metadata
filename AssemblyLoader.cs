@@ -107,6 +107,8 @@ namespace metadata
                 return null;
             PEFile p = new metadata.PEFile();
             ms = p.Parse(s, this);
+            if (ms == null)
+                return null;
 
             if (ms.MajorVersion == major &&
                     ms.MinorVersion == minor &&

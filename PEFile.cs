@@ -101,7 +101,7 @@ namespace metadata
             return Parse(file, curpos, endpos - curpos, al);
         }
 
-        public MetadataStream Parse(DataInterface file, AssemblyLoader al)
+        public MetadataStream Parse(DataInterface file, AssemblyLoader al, bool fail_refs = true)
         {
             var m = new MetadataStream();
             m.al = al;
@@ -151,6 +151,8 @@ namespace metadata
             }
 
             // Read the Cli header
+            if (pefh.CliHeader.RVA == 0)
+                return null;
             long clih_offset = ResolveRVA(pefh.CliHeader.RVA);
             clih = new Cli_Header();
             clih.Metadata.RVA = file.ReadUInt((int)clih_offset + 8);
@@ -298,7 +300,7 @@ namespace metadata
 
                 System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: loading referenced assembly " + ass_name);
 
-                if ((m.referenced_assemblies[i - 1] = al.GetAssembly(ass_name, maj, min, build, rev)) == null)
+                if ((m.referenced_assemblies[i - 1] = al.GetAssembly(ass_name, maj, min, build, rev)) == null && fail_refs)
                     throw new Exception("Cannot load referenced assembly: " +
                         ass_name);
             }
