@@ -34,7 +34,10 @@ namespace metadata
         public int msig;
         public bool is_field;
         public bool is_boxed;   // is it a virtual method on a boxed type?
-
+        public bool ret_type_needs_boxing;  // If a method implements an interface method
+                                            // and the interface method returns an interface
+                                            // but the implementor returns a value type, we
+                                            // need a stub function which boxes the value type
         public TypeSpec[] gmparams;
         public TypeSpec type;
 
@@ -68,6 +71,8 @@ namespace metadata
         public bool Equals(MethodSpec other)
         {
             if (!m.Equals(other.m))
+                return false;
+            if (ret_type_needs_boxing != other.ret_type_needs_boxing)
                 return false;
             if (!type.Equals(other.type))
                 return false;
@@ -103,6 +108,7 @@ namespace metadata
                     cc = cc,
                     gmparams = gmparams,
                     is_boxed = false,
+                    ret_type_needs_boxing = false,
                     is_field = is_field,
                     m = m,
                     mangle_override = mangle_override,
@@ -113,6 +119,25 @@ namespace metadata
                 };
                 return ret;
             }
+        }
+
+        public MethodSpec Clone()
+        {
+            return new MethodSpec
+            {
+                aliases = aliases,
+                cc = cc,
+                gmparams = gmparams,
+                is_boxed = is_boxed,
+                ret_type_needs_boxing = ret_type_needs_boxing,
+                is_field = is_field,
+                m = m,
+                mangle_override = mangle_override,
+                mdrow = mdrow,
+                msig = msig,
+                name_override = name_override,
+                type = type
+            };
         }
 
         public override int GetHashCode()

@@ -489,7 +489,8 @@ namespace metadata
 
         private string MangleMethod(TypeSpec t, string mname, int msig,
             TypeSpec[] gtparams = null, TypeSpec[] gmparams = null,
-            bool is_spec = false, bool is_boxed = false)
+            bool is_spec = false, bool is_boxed = false,
+            bool ret_type_needs_boxing = false)
         {
             StringBuilder sb = new StringBuilder("_Z");
             ManglerState ms = new ManglerState();
@@ -542,6 +543,8 @@ namespace metadata
 
             if (is_boxed)
                 sb.Append("B");
+            if (ret_type_needs_boxing)
+                sb.Append("b");
 
             return sb.ToString();
         }
@@ -553,7 +556,7 @@ namespace metadata
 
             return m.m.MangleMethod(m.type,
                 m.name_override != null ? m.name_override : EncodeString(m.m.GetStringEntry(tid_MethodDef, m.mdrow, 3)),
-                m.msig, m.gtparams, m.gmparams, is_spec, m.is_boxed);
+                m.msig, m.gtparams, m.gmparams, is_spec, m.is_boxed, m.ret_type_needs_boxing);
         }
 
         private void MangleTypeSig(ref int type_idx, StringBuilder sb, ManglerState ms)
