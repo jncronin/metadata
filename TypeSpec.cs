@@ -254,6 +254,30 @@ namespace metadata
             }
         }
 
+        /**<summary>Create a copy of the TypeSpec</summary>*/
+        public TypeSpec Clone()
+        {
+            var ret = new TypeSpec();
+            ret.stype = stype;
+            ret.tdrow = tdrow;
+            ret.other = other;
+            ret.Pinned = Pinned;
+            if (gtparams == null)
+                ret.gtparams = null;
+            else
+            {
+                ret.gtparams = new TypeSpec[gtparams.Length];
+                for (int i = 0; i < gtparams.Length; i++)
+                    ret.gtparams[i] = gtparams[i];
+            }
+            ret.idx = idx;
+            ret.m = m;
+            ret.arr_lobounds = arr_lobounds;
+            ret.arr_rank = arr_rank;
+            ret.arr_sizes = arr_sizes;
+            return ret;
+        }
+
         /**<summary>Convert to a boxed instance if this is a value type</summary> */
         public TypeSpec Box
         {
