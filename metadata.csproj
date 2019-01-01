@@ -44,6 +44,7 @@
     <Compile Include="PEFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Signature.cs" />
+    <Compile Include="SortedList.cs" />
     <Compile Include="TypeSpec.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
