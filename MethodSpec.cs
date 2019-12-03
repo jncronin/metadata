@@ -394,6 +394,64 @@ namespace metadata
             }
         }
 
+        string mrefalias = null;
+        public string MethodReferenceAlias
+        {
+            get
+            {
+                if (mrefalias != null)
+                    return mrefalias;
+
+                string newmrefalias = null;
+                if(m.md_custom_attrs != null)
+                {
+                    int cur_ca = m.md_custom_attrs[mdrow];
+
+                    while (cur_ca != 0)
+                    {
+                        int type_tid, type_row;
+                        m.GetCodedIndexEntry(MetadataStream.tid_CustomAttribute,
+                            cur_ca, 1, m.CustomAttributeType, out type_tid,
+                            out type_row);
+
+                        MethodSpec ca_ms;
+                        m.GetMethodDefRow(type_tid, type_row, out ca_ms);
+                        var ca_ms_name = ca_ms.MangleMethod();
+
+                        if (ca_ms_name == "_ZN14libsupcs#2Edll8libsupcs29MethodReferenceAliasAttribute_7#2Ector_Rv_P2u1tu1S")
+                        {
+                            int val_idx = (int)m.GetIntEntry(MetadataStream.tid_CustomAttribute,
+                                cur_ca, 2);
+
+                            m.SigReadUSCompressed(ref val_idx);
+                            var prolog = m.sh_blob.di.ReadUShort(val_idx);
+                            if (prolog == 0x0001)
+                            {
+                                val_idx += 2;
+
+                                var str_len = m.SigReadUSCompressed(ref val_idx);
+                                StringBuilder sb = new StringBuilder();
+                                for (uint i = 0; i < str_len; i++)
+                                {
+                                    sb.Append((char)m.sh_blob.di.ReadByte(val_idx++));
+                                }
+                                newmrefalias = sb.ToString();
+                                break;
+                            }
+                        }
+
+                        cur_ca = m.next_ca[cur_ca];
+                    }
+                }
+
+                if (newmrefalias == null)
+                    newmrefalias = MangleMethod();
+
+                System.Threading.Interlocked.CompareExchange<string>(ref mrefalias, newmrefalias, null);
+                return newmrefalias;
+            }
+        }
+
         public IEnumerable<string> MethodAliases
         {
             get
