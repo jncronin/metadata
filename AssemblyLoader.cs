@@ -69,6 +69,8 @@ namespace metadata
         {
             MetadataStream ms;
 
+            if (name == "netstandard") name = "mscorlib";
+
             var simple_name = StripPathAndExtension(name);
 
             if (cache.TryGetValue(simple_name, out ms))
@@ -98,7 +100,8 @@ namespace metadata
                     ms.MinorVersion == minor &&
                     ms.BuildVersion == build &&
                     ms.RevisionVersion == revision ||
-                    RequireVersionMatch == false)
+                    RequireVersionMatch == false ||
+                    major == -1)
                 return ms;
             }
 
@@ -114,7 +117,8 @@ namespace metadata
                     ms.MinorVersion == minor &&
                     ms.BuildVersion == build &&
                     ms.RevisionVersion == revision ||
-                    RequireVersionMatch == false)
+                    RequireVersionMatch == false ||
+                    major == -1)
             {
                 cache[simple_name] = ms;
                 return ms;

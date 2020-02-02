@@ -302,7 +302,10 @@ namespace metadata
                 var rev = (int)m.GetIntEntry(MetadataStream.tid_AssemblyRef, i, 3);
 
                 if (ass_name == "netstandard")
-                    continue;
+                {
+                    ass_name = "mscorlib";
+                    maj = -1;
+                }
 
                 System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: loading referenced assembly " + ass_name);
 
