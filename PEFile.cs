@@ -122,9 +122,15 @@ namespace metadata
                 System.Diagnostics.Debugger.Break();
                 throw new Exception("Invalid PE file header characteristics");
             }
+
+            int pe32plusoffset = 0;
+            ushort magic = file.ReadUShort((int)pefh_start + 20);
+            if (magic == 0x20b)
+                pe32plusoffset = 16;
+
             pefh.CliHeader = new DataDir();
-            pefh.CliHeader.RVA = file.ReadUInt((int)pefh_start + 228);
-            pefh.CliHeader.Size = file.ReadUInt((int)pefh_start + 232);
+            pefh.CliHeader.RVA = file.ReadUInt((int)pefh_start + 228 + pe32plusoffset);
+            pefh.CliHeader.Size = file.ReadUInt((int)pefh_start + 232 + pe32plusoffset);
 
             // Read the section headers
             uint sections_start = pefh_start + 20 + pefh.OptHeaderSize;
