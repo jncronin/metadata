@@ -108,9 +108,12 @@ namespace metadata
             pefh = new PE_File_Header();
 
             uint pefh_start = file.ReadUInt(0x3c) + 4;
+            uint pesig = file.ReadUInt((int)pefh_start - 4);
+            System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: PE Signature: " + pesig.ToString("X8"));
             pefh.NumberOfSections = file.ReadUShort((int)pefh_start + 2);
             pefh.Sections = new SectionHeader[pefh.NumberOfSections];
-            TimeSpan t = new TimeSpan(0, 0, (int)file.ReadUInt((int)pefh_start + 4));
+            TimeSpan t = new TimeSpan(0, 0, (int)(file.ReadUInt((int)pefh_start + 4) & 0x7fffffff));    // csc /deterministic sets top bit - ignore for timestamp purposes
+            System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: t: " + ((int)file.ReadUInt((int)pefh_start + 4)).ToString());
             pefh.TimeDateStamp = new DateTime(1970, 1, 1) + t;
             pefh.OptHeaderSize = file.ReadUShort((int)pefh_start + 16);
             if (pefh.OptHeaderSize < 224)
