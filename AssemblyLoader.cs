@@ -72,7 +72,6 @@ namespace metadata
             if (name == "netstandard") name = "mscorlib";
 
             var simple_name = StripPathAndExtension(name);
-            if(simple_name == "System.Private.CoreLib") { simple_name = "mscorlib"; name = "mscorlib"; }
 
             if (cache.TryGetValue(simple_name, out ms))
                 return ms;
