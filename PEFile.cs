@@ -75,6 +75,54 @@ namespace metadata
             public DataInterface di;
         }
 
+        /**<summary>An exception that is thrown when an assembly cannot be loaded</summary>
+         */
+        public class AssemblyLoadException : Exception
+        {
+            public class ALEAssembly
+            {
+                public string Name { get; internal set; }
+                public int Major { get; internal set; }
+                public int Minor { get; internal set; }
+                public int Revision { get; internal set; }
+                public int Build { get; internal set; }
+
+                public override string ToString()
+                {
+                    return Name + " (" + Major.ToString() + ", " + Minor.ToString() + ", " +
+                        Revision.ToString() + ", " + Build.ToString() + ")";
+                }
+            }
+
+            public ALEAssembly ReferencedAssembly { get; internal set; }
+            public ALEAssembly CurrentAssembly { get; internal set; }
+            public List<ALEAssembly> CurrentlyLoadedAssemblies { get; internal set; } = new List<ALEAssembly>();
+
+            public override string ToString()
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.Append("Could not load referenced assembly:");
+                sb.Append(Environment.NewLine);
+                sb.Append(ReferencedAssembly.ToString());
+                sb.Append(Environment.NewLine);
+                sb.Append("from:");
+                sb.Append(Environment.NewLine);
+                sb.Append(CurrentAssembly);
+                sb.Append(Environment.NewLine);
+                sb.Append(Environment.NewLine);
+                sb.Append("Currently loaded assemblies:");
+                sb.Append(Environment.NewLine);
+                foreach(var cle in CurrentlyLoadedAssemblies)
+                {
+                    sb.Append(cle.ToString());
+                    sb.Append(Environment.NewLine);
+                }
+                return sb.ToString();
+            }
+
+            public override string Message => ToString();
+        }
+
         public long ResourcesOffset { get { return ResolveRVA(clih.Resources.RVA); } }
         public long ResourcesSize { get { return clih.Resources.Size; } }
 
@@ -304,17 +352,56 @@ namespace metadata
                 var build = (int)m.GetIntEntry(MetadataStream.tid_AssemblyRef, i, 2);
                 var rev = (int)m.GetIntEntry(MetadataStream.tid_AssemblyRef, i, 3);
 
-                if (ass_name == "netstandard")
+                if (ass_name == "netstandard" || ass_name == "System.Private.CoreLib")
                 {
                     ass_name = "mscorlib";
                     maj = -1;
                 }
 
+                if(ass_name == m.AssemblyName)
+                {
+                    m.referenced_assemblies[i - 1] = m;
+                    continue;
+                }
+
                 System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: loading referenced assembly " + ass_name);
 
                 if ((m.referenced_assemblies[i - 1] = al.GetAssembly(ass_name, maj, min, build, rev)) == null && fail_refs)
-                    throw new Exception("Cannot load referenced assembly: " +
-                        ass_name);
+                {
+                    var ale = new AssemblyLoadException();
+                    ale.ReferencedAssembly = new AssemblyLoadException.ALEAssembly
+                    {
+                        Name = ass_name,
+                        Major = maj,
+                        Minor = min,
+                        Revision = rev,
+                        Build = build
+                    };
+                    ale.CurrentAssembly = new AssemblyLoadException.ALEAssembly
+                    {
+                        Name = m.AssemblyName,
+                        Major = m.MajorVersion,
+                        Minor = m.MinorVersion,
+                        Revision = m.RevisionVersion,
+                        Build = m.BuildVersion
+                    };
+
+                    foreach (var la in al.LoadedAssemblies)
+                    {
+                        var cla = al.GetAssembly(la);
+
+                        var clale = new AssemblyLoadException.ALEAssembly
+                        {
+                            Name = cla.AssemblyName,
+                            Major = cla.MajorVersion,
+                            Minor = cla.MinorVersion,
+                            Revision = cla.RevisionVersion,
+                            Build = cla.BuildVersion
+                        };
+                        ale.CurrentlyLoadedAssemblies.Add(clale);
+                    }
+                    throw ale;
+                }
             }
 
             m.PatchMethodDefOwners();
