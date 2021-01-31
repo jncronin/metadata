@@ -308,7 +308,7 @@ namespace metadata
             int cur_ca = m.md_custom_attrs[mdrow];
 
             while (cur_ca != 0)
-            {
+            { 
                 int type_tid, type_row;
                 m.GetCodedIndexEntry(MetadataStream.tid_CustomAttribute,
                     cur_ca, 1, m.CustomAttributeType, out type_tid,
@@ -320,6 +320,23 @@ namespace metadata
 
                 if (ca_ms_name.Equals(ctor))
                     return cur_ca;
+
+                var extends = ca_ms.type.GetExtends();
+                while (extends != null && extends.MangleType() != "_ZW6System9Attribute")
+
+                {
+                    var inherited_ctor = extends.m.GetMethodDefRow(extends, ".ctor", ca_ms.msig, ca_ms.m, false);
+
+                    if (inherited_ctor != -1)
+                    {
+                        MethodSpec ca_extend_ms;
+                        extends.m.GetMethodDefRow(MetadataStream.tid_MethodDef, inherited_ctor, out ca_extend_ms);
+                        if(ca_extend_ms.MangleMethod().Equals(ctor))
+                            return cur_ca;
+                    }
+
+                    extends = extends.GetExtends();
+                }
 
                 cur_ca = m.next_ca[cur_ca];
             }
