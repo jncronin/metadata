@@ -53,6 +53,15 @@ namespace metadata
 
         public abstract IEnumerable<int> CustomAttributes(string ctor = null);
 
+        public abstract bool HasCustomAttribute(string ctor);
+
+        public abstract bool IsAlwaysInvoke { get; }
+
+        protected internal bool HasAlwaysInvoke()
+        {
+            return HasCustomAttribute("_ZN14libsupcs#2Edll8libsupcs21AlwaysInvokeAttribute_7#2Ector_Rv_P1u1t");
+        }
+
         public IList<string> CustomAttributeNames
         {
             get
@@ -389,6 +398,14 @@ namespace metadata
         public string MangleType()
         {
             return m.MangleType(this);
+        }
+
+        public override bool IsAlwaysInvoke
+        {
+            get
+            {
+                return HasAlwaysInvoke();
+            }
         }
 
         public override bool IsInstantiatedGenericType
@@ -923,7 +940,7 @@ namespace metadata
             return VerificationType.Equals(w.VerificationType);
         }
 
-        public bool HasCustomAttribute(string ctor)
+        public override bool HasCustomAttribute(string ctor)
         {
             int cur_ca = m.td_custom_attrs[tdrow];
 

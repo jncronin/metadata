@@ -58,6 +58,19 @@ namespace metadata
             }
         }
 
+        public bool IsStatic
+        {
+            get
+            {
+                return (GetFlags() & 0x10) != 0;
+            }
+        }
+
+        uint GetFlags()
+        {
+            return m.GetIntEntry(MetadataStream.tid_MethodDef, mdrow, 2);
+        }
+
         public TypeSpec[] gtparams
         {
             get
@@ -296,9 +309,14 @@ namespace metadata
             }
         }
 
-        public bool HasCustomAttribute(string ctor)
+        public override bool HasCustomAttribute(string ctor)
         {
             return GetCustomAttribute(ctor) != -1;
+        }
+
+        public override bool IsAlwaysInvoke
+        {
+            get { return HasAlwaysInvoke() || (type != null && type.HasAlwaysInvoke()); }
         }
 
         public int GetCustomAttribute(string ctor)
