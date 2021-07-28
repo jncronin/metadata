@@ -30,6 +30,7 @@ namespace metadata
     {
         PE_File_Header pefh;
         Cli_Header clih;
+        bool pdbf = false;
 
         private class DataDir
         {
@@ -149,81 +150,93 @@ namespace metadata
             return Parse(file, curpos, endpos - curpos, al);
         }
 
-        public MetadataStream Parse(DataInterface file, AssemblyLoader al, bool fail_refs = true)
+        public MetadataStream Parse(DataInterface file, AssemblyLoader al, bool fail_refs = true, bool is_pdb = false)
         {
             var m = new MetadataStream();
             m.al = al;
-            pefh = new PE_File_Header();
 
-            uint pefh_start = file.ReadUInt(0x3c) + 4;
-            uint pesig = file.ReadUInt((int)pefh_start - 4);
-            System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: PE Signature: " + pesig.ToString("X8"));
-            pefh.NumberOfSections = file.ReadUShort((int)pefh_start + 2);
-            pefh.Sections = new SectionHeader[pefh.NumberOfSections];
-            TimeSpan t = new TimeSpan(0, 0, (int)(file.ReadUInt((int)pefh_start + 4) & 0x7fffffff));    // csc /deterministic sets top bit - ignore for timestamp purposes
-            System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: t: " + ((int)file.ReadUInt((int)pefh_start + 4)).ToString());
-            pefh.TimeDateStamp = new DateTime(1970, 1, 1) + t;
-            pefh.OptHeaderSize = file.ReadUShort((int)pefh_start + 16);
-            if (pefh.OptHeaderSize < 224)
-                throw new Exception("PE optional header too small");
-            pefh.Chars = file.ReadUShort((int)pefh_start + 18);
-            if ((pefh.Chars & 0x3) != 0x2)
+            long mroot_offset;
+            if (is_pdb)
             {
-                System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: Invalid PE file header characteristics: " + pefh.Chars.ToString());
-                System.Diagnostics.Debugger.Break();
-                throw new Exception("Invalid PE file header characteristics");
+                mroot_offset = 0;
+                pdbf = true;
             }
-
-            int pe32plusoffset = 0;
-            ushort magic = file.ReadUShort((int)pefh_start + 20);
-            if (magic == 0x20b)
-                pe32plusoffset = 16;
-
-            pefh.CliHeader = new DataDir();
-            pefh.CliHeader.RVA = file.ReadUInt((int)pefh_start + 228 + pe32plusoffset);
-            pefh.CliHeader.Size = file.ReadUInt((int)pefh_start + 232 + pe32plusoffset);
-
-            // Read the section headers
-            uint sections_start = pefh_start + 20 + pefh.OptHeaderSize;
-            for (uint i = 0; i < pefh.NumberOfSections; i++)
+            else
             {
-                uint s_start = sections_start + i * 40;
-                pefh.Sections[i] = new SectionHeader();
+                pefh = new PE_File_Header();
 
-                char[] w_str = new char[9];
-                for (int j = 0; j < 8; j++)
-                    w_str[j] = (char)file.ReadByte((int)s_start + j);
-                w_str[8] = '\0';
+                uint pefh_start = file.ReadUInt(0x3c) + 4;
+                uint pesig = file.ReadUInt((int)pefh_start - 4);
+                System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: PE Signature: " + pesig.ToString("X8"));
+                pefh.NumberOfSections = file.ReadUShort((int)pefh_start + 2);
+                pefh.Sections = new SectionHeader[pefh.NumberOfSections];
+                TimeSpan t = new TimeSpan(0, 0, (int)(file.ReadUInt((int)pefh_start + 4) & 0x7fffffff));    // csc /deterministic sets top bit - ignore for timestamp purposes
+                System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: t: " + ((int)file.ReadUInt((int)pefh_start + 4)).ToString());
+                pefh.TimeDateStamp = new DateTime(1970, 1, 1) + t;
+                pefh.OptHeaderSize = file.ReadUShort((int)pefh_start + 16);
+                if (pefh.OptHeaderSize < 224)
+                    throw new Exception("PE optional header too small");
+                pefh.Chars = file.ReadUShort((int)pefh_start + 18);
+                if ((pefh.Chars & 0x3) != 0x2)
+                {
+                    System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: Invalid PE file header characteristics: " + pefh.Chars.ToString());
+                    System.Diagnostics.Debugger.Break();
+                    throw new Exception("Invalid PE file header characteristics");
+                }
 
-                pefh.Sections[i].Name = new String(w_str);
-                pefh.Sections[i].Name = pefh.Sections[i].Name.Remove(pefh.Sections[i].Name.IndexOf("\0"));
-                System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: section name: " + pefh.Sections[i].Name + "\n");
+                int pe32plusoffset = 0;
+                ushort magic = file.ReadUShort((int)pefh_start + 20);
+                if (magic == 0x20b)
+                    pe32plusoffset = 16;
 
-                pefh.Sections[i].VSize = file.ReadUInt((int)s_start + 8);
-                pefh.Sections[i].VAddress = file.ReadUInt((int)s_start + 12);
-                pefh.Sections[i].PSize = file.ReadUInt((int)s_start + 16);
-                pefh.Sections[i].PAddress = file.ReadUInt((int)s_start + 20);
+                pefh.CliHeader = new DataDir();
+                pefh.CliHeader.RVA = file.ReadUInt((int)pefh_start + 228 + pe32plusoffset);
+                pefh.CliHeader.Size = file.ReadUInt((int)pefh_start + 232 + pe32plusoffset);
 
-                pefh.Sections[i].Chars = file.ReadUInt((int)s_start + 36);
+                // Read the section headers
+                uint sections_start = pefh_start + 20 + pefh.OptHeaderSize;
+                for (uint i = 0; i < pefh.NumberOfSections; i++)
+                {
+                    uint s_start = sections_start + i * 40;
+                    pefh.Sections[i] = new SectionHeader();
+
+                    char[] w_str = new char[9];
+                    for (int j = 0; j < 8; j++)
+                        w_str[j] = (char)file.ReadByte((int)s_start + j);
+                    w_str[8] = '\0';
+
+                    pefh.Sections[i].Name = new String(w_str);
+                    pefh.Sections[i].Name = pefh.Sections[i].Name.Remove(pefh.Sections[i].Name.IndexOf("\0"));
+                    System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: section name: " + pefh.Sections[i].Name + "\n");
+
+                    pefh.Sections[i].VSize = file.ReadUInt((int)s_start + 8);
+                    pefh.Sections[i].VAddress = file.ReadUInt((int)s_start + 12);
+                    pefh.Sections[i].PSize = file.ReadUInt((int)s_start + 16);
+                    pefh.Sections[i].PAddress = file.ReadUInt((int)s_start + 20);
+
+                    pefh.Sections[i].Chars = file.ReadUInt((int)s_start + 36);
+                }
+
+                // Read the Cli header
+                if (pefh.CliHeader.RVA == 0)
+                    return null;
+                long clih_offset = ResolveRVA(pefh.CliHeader.RVA);
+
+
+                clih = new Cli_Header();
+                clih.Metadata.RVA = file.ReadUInt((int)clih_offset + 8);
+                clih.Metadata.Size = file.ReadUInt((int)clih_offset + 12);
+                clih.EntryPointToken = file.ReadUInt((int)clih_offset + 20);
+                clih.Resources.RVA = file.ReadUInt((int)clih_offset + 24);
+                clih.Resources.Size = file.ReadUInt((int)clih_offset + 28);
+
+                m.entry_point_token = clih.EntryPointToken;
+
+                System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: CLI header parsed");
+
+                // First, read the metadata root
+                mroot_offset = ResolveRVA(clih.Metadata.RVA);
             }
-
-            // Read the Cli header
-            if (pefh.CliHeader.RVA == 0)
-                return null;
-            long clih_offset = ResolveRVA(pefh.CliHeader.RVA);
-            clih = new Cli_Header();
-            clih.Metadata.RVA = file.ReadUInt((int)clih_offset + 8);
-            clih.Metadata.Size = file.ReadUInt((int)clih_offset + 12);
-            clih.EntryPointToken = file.ReadUInt((int)clih_offset + 20);
-            clih.Resources.RVA = file.ReadUInt((int)clih_offset + 24);
-            clih.Resources.Size = file.ReadUInt((int)clih_offset + 28);
-
-            m.entry_point_token = clih.EntryPointToken;
-
-            System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: CLI header parsed");
-
-            // First, read the metadata root
-            long mroot_offset = ResolveRVA(clih.Metadata.RVA);
             uint sig = file.ReadUInt((int)mroot_offset);
             if (sig != 0x424A5342)
                 throw new Exception("Invalid metadata root");
@@ -238,7 +251,7 @@ namespace metadata
             {
                 StreamHeader sh = new StreamHeader();
                 sh.Offset = file.ReadUInt(cur_offset);
-                sh.FileOffset = ResolveRVA(clih.Metadata.RVA + sh.Offset);
+                sh.FileOffset = ResolveRVA((is_pdb ? 0 : clih.Metadata.RVA) + sh.Offset);
                 sh.Size = file.ReadUInt(cur_offset + 4);
 
                 cur_offset += 8;
@@ -270,6 +283,8 @@ namespace metadata
                     m.sh_blob = sh;
                 else if (sh.Name == "#~")
                     m.sh_tables = sh;
+                else if (sh.Name == "#Pdb")
+                    m.sh_pdb = sh;
                 else
                 {
                     System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: unknown table \"" + sh.Name + "\"");
@@ -415,6 +430,26 @@ namespace metadata
             m.LoadBuiltinTypes();
 
             System.Diagnostics.Debugger.Log(0, "metadata", "PEFile.Parse: parsing complete");
+
+            /* Load up a .pdb sidecar file if necessary */
+            if(m.sh_pdb != null)
+            {
+                m.pdb = m;
+            }
+            else
+            {
+                var fname = file.Name;
+                if(fname.EndsWith(".dll") || fname.EndsWith(".exe"))
+                {
+                    fname = fname.Substring(0, fname.Length - 4);
+                }
+                var pdbf = al.LoadAssembly(fname + ".pdb");
+                if(pdbf != null)
+                {
+                    var pef = new metadata.PEFile();
+                    m.pdb = pef.Parse(pdbf, al, true, true);
+                }
+            }
             
             return m;
         }
@@ -662,6 +697,55 @@ namespace metadata
                     // TypeSpec
                     InterpretBlobIndex(table_id, m);
                     break;
+                case 0x30:
+                    // Document
+                    InterpretBlobIndex(table_id, m);
+                    InterpretGuidIndex(table_id, m);
+                    InterpretBlobIndex(table_id, m);
+                    InterpretGuidIndex(table_id, m);
+                    break;
+                case 0x31:
+                    // MethodDebugInformation
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.Document]);
+                    InterpretBlobIndex(table_id, m);
+                    break;
+                case 0x32:
+                    // LocalScope
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.MethodDef]);
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.ImportScope]);
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.LocalVariable]);
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.LocalConstant]);
+                    InterpretUInt(table_id, m);
+                    InterpretUInt(table_id, m);
+                    break;
+                case 0x33:
+                    // LocalVariable
+                    InterpretUShort(table_id, m);
+                    InterpretUShort(table_id, m);
+                    InterpretStringIndex(table_id, m);
+                    break;
+                case 0x34:
+                    // LocalConstant
+                    InterpretStringIndex(table_id, m);
+                    InterpretBlobIndex(table_id, m);
+                    break;
+                case 0x35:
+                    // ImportScope
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.ImportScope]);
+                    InterpretBlobIndex(table_id, m);
+                    break;
+                case 0x36:
+                    // StateMachineMethod
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.MethodDef]);
+                    InterpretSimpleIndex(table_id, m, m.TableIDs[MetadataStream.TableId.MethodDef]);
+                    break;
+                case 0x37:
+                    // CustomDebugInformation
+                    InterpretCodedIndex(table_id, m, m.HasCustomDebugInformation);
+                    InterpretGuidIndex(table_id, m);
+                    InterpretBlobIndex(table_id, m);
+                    break;
+
                 default:
                     throw new Exception("Unsupported metadata table type: " + table_id.ToString());
             }
@@ -811,6 +895,8 @@ namespace metadata
 
         public long ResolveRVA(long RVA)
         {
+            if (pdbf)
+                return RVA;
             if (pefh.Sections == null)
                 throw new Exception("Section table not initialized");
             for (uint i = 0; i < pefh.NumberOfSections; i++)

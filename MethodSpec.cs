@@ -184,6 +184,14 @@ namespace metadata
             return Equals(obj as MethodSpec);
         }
 
+        public bool IsField
+        {
+            get
+            {
+                return is_field;
+            }
+        }
+
         public bool IsGeneric
         {
             get
@@ -251,8 +259,16 @@ namespace metadata
             {
                 if (name_override != null)
                     return name_override;
-                return m.GetStringEntry(MetadataStream.tid_MethodDef,
-                    mdrow, 3);
+                if (is_field)
+                {
+                    return m.GetStringEntry(MetadataStream.tid_Field,
+                        mdrow, 1);
+                }
+                else
+                {
+                    return m.GetStringEntry(MetadataStream.tid_MethodDef,
+                        mdrow, 3);
+                }
             }
         }
 
@@ -366,7 +382,7 @@ namespace metadata
         {
             if (m.md_custom_attrs == null)
                 yield break;
-            int cur_ca = m.md_custom_attrs[mdrow];
+            int cur_ca = is_field ? m.fd_custom_attrs[mdrow] : m.md_custom_attrs[mdrow];
 
             while (cur_ca != 0)
             {

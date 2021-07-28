@@ -85,6 +85,37 @@ namespace metadata
                 return (long)u;
         }
 
+        public virtual char ReadUTF8(ref int offset)
+        {
+            var c1 = ReadByte(offset++);
+            if((c1 & 0xc0) == 0xc0)
+            {
+                var c2 = ReadByte(offset++);
+                if((c1 & 0x20) == 0x20)
+                {
+                    var c3 = ReadByte(offset++);
+                    if ((c1 & 0x10) == 0x10)
+                    {
+                        var c4 = ReadByte(offset++);
+
+                        // TODO: handle 4 byte returns
+                    }
+
+                    // TODO: handle 3 byte returns
+                }
+
+                uint ret = (uint)(c2 & 0x3fU) |
+                    (((uint)(c1 & 0x1fU)) << 6);
+                return (char)ret;
+            }
+            return (char)c1;
+        }
+
+        public virtual char ReadUTF8(int offset)
+        {
+            return ReadUTF8(ref offset);
+        }
+
         public virtual int GetLength()
         {
             return 0;

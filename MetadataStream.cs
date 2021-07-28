@@ -31,10 +31,12 @@ namespace metadata
 
         internal string assemblyName;
 
-        public PEFile.StreamHeader sh_string, sh_guid, sh_blob, sh_us, sh_tables;
+        public PEFile.StreamHeader sh_string, sh_guid, sh_blob, sh_us, sh_tables, sh_pdb;
         internal PEFile pef;
         public AssemblyLoader al;
         public DataInterface file;
+
+        public MetadataStream pdb;
 
         public long ResolveRVA(long RVA) { return pef.ResolveRVA(RVA); }
         public PEFile GetPEFile() { return pef; }
@@ -1442,7 +1444,15 @@ namespace metadata
             StandAloneSig = 0x11,
             TypeDef = 0x02,
             TypeRef = 0x01,
-            TypeSpec = 0x1b
+            TypeSpec = 0x1b,
+            Document = 0x30,
+            MethodDebugInformation = 0x31,
+            LocalScope = 0x32,
+            LocalVariable = 0x33,
+            LocalConstant = 0x34,
+            ImportScope = 0x35,
+            StateMachineMethod = 0x36,
+            CustomDebugInformation = 0x37
         }
 
         public class CodedIndexTemplate
@@ -1455,7 +1465,8 @@ namespace metadata
             HasCustomAttribute, HasFieldMarshal, HasDeclSecurity,
             MemberRefParent, HasSemantics, MethodDefOrRef,
             MemberForwarded, Implementation, CustomAttributeType,
-            ResolutionScope, TypeOrMethodDef;
+            ResolutionScope, TypeOrMethodDef,
+            HasCustomDebugInformation;
 
         public Dictionary<TableId, int> TableIDs = new Dictionary<TableId, int>(
             new GenericEqualityComparerEnum<TableId>());
@@ -1503,6 +1514,14 @@ namespace metadata
             TableIDs[TableId.TypeDef] = 0x02;
             TableIDs[TableId.TypeRef] = 0x01;
             TableIDs[TableId.TypeSpec] = 0x1b;
+            TableIDs[TableId.Document] = 0x30;
+            TableIDs[TableId.MethodDebugInformation] = 0x31;
+            TableIDs[TableId.LocalScope] = 0x32;
+            TableIDs[TableId.LocalVariable] = 0x33;
+            TableIDs[TableId.LocalConstant] = 0x34;
+            TableIDs[TableId.ImportScope] = 0x35;
+            TableIDs[TableId.StateMachineMethod] = 0x36;
+            TableIDs[TableId.CustomDebugInformation] = 0x37;
 
             TypeDefOrRef = new CodedIndexTemplate
             {
@@ -1663,6 +1682,41 @@ namespace metadata
                 {
                     TableIDs[TableId.TypeDef],
                     TableIDs[TableId.MethodDef]
+                }
+            };
+
+            HasCustomDebugInformation = new CodedIndexTemplate
+            {
+                TagBits = 5,
+                Members = new int[]
+                {
+                    TableIDs[TableId.MethodDef],
+                    TableIDs[TableId.Field],
+                    TableIDs[TableId.TypeRef],
+                    TableIDs[TableId.TypeDef],
+                    TableIDs[TableId.Param],
+                    TableIDs[TableId.InterfaceImpl],
+                    TableIDs[TableId.MemberRef],
+                    TableIDs[TableId.Module],
+                    TableIDs[TableId.DeclSecurity],
+                    TableIDs[TableId.Property],
+                    TableIDs[TableId.Event],
+                    TableIDs[TableId.StandAloneSig],
+                    TableIDs[TableId.ModuleRef],
+                    TableIDs[TableId.TypeSpec],
+                    TableIDs[TableId.Assembly],
+                    TableIDs[TableId.AssemblyRef],
+                    TableIDs[TableId.File],
+                    TableIDs[TableId.ExportedType],
+                    TableIDs[TableId.ManifestResource],
+                    TableIDs[TableId.GenericParam],
+                    TableIDs[TableId.GenericParamConstaint],
+                    TableIDs[TableId.MethodSpec],
+                    TableIDs[TableId.Document],
+                    TableIDs[TableId.LocalScope],
+                    TableIDs[TableId.LocalVariable],
+                    TableIDs[TableId.LocalConstant],
+                    TableIDs[TableId.ImportScope]
                 }
             };
         }

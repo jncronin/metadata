@@ -291,6 +291,50 @@ namespace metadata
                 ((uint)b3 << 8) | b4;
         }
 
+        public int SigReadSCompressed(ref int idx, bool us = false)
+        {
+            PEFile.StreamHeader sh = sh_blob;
+            if (us)
+                sh = sh_us;
+
+            byte[] bval = new byte[4];
+
+            byte b1 = sh.di.ReadByte(idx++);
+            if ((b1 & 0x80) == 0)
+            {
+                // sign-extend (value has been left-rotated, so sign bit is in bit 0)
+                if ((b1 & 0x01U) == 0x01U)
+                {
+
+                    bval[0] = (byte)((b1 >> 1) | 0xc0);
+                    bval[1] = 0xff;
+                    bval[2] = 0xff;
+                    bval[3] = 0xff;
+                }
+                else
+                {
+                    bval[0] = (byte)(b1 >> 1);
+                    bval[1] = 0;
+                    bval[2] = 0;
+                    bval[3] = 0;
+                }
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            return BitConverter.ToInt32(bval, 0);
+            /*byte b2 = sh.di.ReadByte(idx++);
+            if ((b1 & 0xc0) == 0x80)
+                return (b1 & 0x3fU) << 8 | b2;
+
+            byte b3 = sh.di.ReadByte(idx++);
+            byte b4 = sh.di.ReadByte(idx++);
+            return (b1 & 0x1fU) << 24 | ((uint)b2 << 16) |
+                ((uint)b3 << 8) | b4; */
+        }
+
         public static List<byte> SigWriteUSCompressed(uint val)
         {
             List<byte> ret = new List<byte>();
