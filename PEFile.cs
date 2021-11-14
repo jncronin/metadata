@@ -447,7 +447,14 @@ namespace metadata
                 if(pdbf != null)
                 {
                     var pef = new metadata.PEFile();
-                    m.pdb = pef.Parse(pdbf, al, true, true);
+                    try
+                    {
+                        m.pdb = pef.Parse(pdbf, al, true, true);
+                    }
+                    catch(Exception)
+                    {
+                        m.pdb = null;
+                    }
                 }
             }
             

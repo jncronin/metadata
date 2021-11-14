@@ -140,7 +140,7 @@ namespace metadata
             SystemTypedByRef = GetBuiltin("TypedReference");
             SystemDouble = GetBuiltin("Double");
             SystemSingle = GetBuiltin("Single");
-            SystemBool = GetBuiltin("Bool");
+            SystemBool = GetBuiltin("Boolean");
         }
 
         internal BuiltInType GetBuiltin(string name, string nspace = "System", string mod = "mscorlib")
