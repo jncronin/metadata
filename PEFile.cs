@@ -439,21 +439,24 @@ namespace metadata
             else
             {
                 var fname = file.Name;
-                if(fname.EndsWith(".dll") || fname.EndsWith(".exe"))
+                if (fname != null)
                 {
-                    fname = fname.Substring(0, fname.Length - 4);
-                }
-                var pdbf = al.LoadAssembly(fname + ".pdb");
-                if(pdbf != null)
-                {
-                    var pef = new metadata.PEFile();
-                    try
+                    if (fname.EndsWith(".dll") || fname.EndsWith(".exe"))
                     {
-                        m.pdb = pef.Parse(pdbf, al, true, true);
+                        fname = fname.Substring(0, fname.Length - 4);
                     }
-                    catch(Exception)
+                    var pdbf = al.LoadAssembly(fname + ".pdb");
+                    if (pdbf != null)
                     {
-                        m.pdb = null;
+                        var pef = new metadata.PEFile();
+                        try
+                        {
+                            m.pdb = pef.Parse(pdbf, al, true, true);
+                        }
+                        catch (Exception)
+                        {
+                            m.pdb = null;
+                        }
                     }
                 }
             }
