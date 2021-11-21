@@ -39,6 +39,8 @@ namespace metadata
 
         public virtual bool AlwaysCompile { get; set; }
 
+        public int JitFlags = 0;    // used by JIT engine to mark a compilation as in progress
+
         /**<summary>Defines a run-time signature where all module references
          * are referenced by memory address</summary> */
         public class FullySpecSignature
